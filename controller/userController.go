@@ -1,47 +1,113 @@
 package controller
 
 import (
-	"blog/middleware"
 	"blog/model"
-	"fmt"
+	"blog/param"
+	"blog/service"
 	"net/http"
-	"time"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
-type User struct{}
+type UserController struct{}
 
-func (u User) Login(ctx *gin.Context) {
-	// 用户名、密码
-	username := ctx.PostForm("username")
-	password := ctx.PostForm("password")
+// 登录
+func (UserController) Login(ctx *gin.Context) {
+	uParam := param.LoginParam{}
+	err := ctx.Bind(&uParam)
 
-	user := model.User{}
-	user.Username = username
-	user.Password = password
-
-	result := model.DB.Take(&user)
-
-	// 用户查询成功
-	if result.RowsAffected > 0 {
-		fmt.Println(user)
-		tokenString, err := middleware.JWTClaims{}.GetToken(user.Id, user.Username, user.Account)
-		fmt.Println(err)
-
-		if err != nil {
-			ctx.JSON(http.StatusOK, gin.H{"code": -1, "message": "登录失败", "data": gin.H{"token": tokenString}})
-			return
-		}
-
-		ctx.JSON(http.StatusOK, gin.H{"code": 0, "message": "登录成功", "data": gin.H{"token": tokenString}})
-	} else {
-		ctx.JSON(http.StatusOK, gin.H{"code": -1, "message": "帐密不符"})
+	if err != nil {
+		ctx.JSON(http.StatusOK, gin.H{"code": -1, "message": "参数错误"})
+		return
 	}
+
+	res := service.UserService{}.Login(uParam)
+
+	ctx.JSON(http.StatusOK, res)
 }
 
-func (u User) List(ctx *gin.Context) {
-	// 查询数据库，将查询到的数据存入切片
+// 注册用户
+func (UserController) Register(ctx *gin.Context) {
+	uParam := param.AddUserParam{}
+	err := ctx.Bind(&uParam)
+
+	if err != nil {
+		ctx.JSON(http.StatusOK, gin.H{"code": -1, "message": "参数错误"})
+		return
+	}
+
+	res := service.UserService{}.AddUser(uParam)
+	if res {
+		ctx.JSON(http.StatusOK, gin.H{"code": 0, "message": "注册成功"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"code": -1, "message": "注册失败"})
+}
+
+// 编辑用户
+func (UserController) Edit(ctx *gin.Context) {
+	uParam := param.EditUserParam{}
+
+	err := ctx.Bind(&uParam)
+
+	if err != nil {
+		ctx.JSON(http.StatusOK, gin.H{"code": -1, "message": "参数错误"})
+		return
+	}
+
+	res := service.UserService{}.EditUser(uParam)
+	if res {
+		ctx.JSON(http.StatusOK, gin.H{"code": 0, "message": "更新成功"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"code": -1, "message": "更新失败"})
+}
+
+// 删除用户
+func (UserController) Delete(ctx *gin.Context) {
+	id := ctx.Query("id")
+	userId, err := strconv.Atoi(id)
+
+	if err != nil {
+		ctx.JSON(http.StatusOK, gin.H{"code": -1, "message": "参数错误"})
+		return
+	}
+
+	res := service.UserService{}.DeteleUser(userId)
+
+	if res {
+		ctx.JSON(http.StatusOK, gin.H{"code": 0, "message": "删除成功"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"code": -1, "message": "删除失败"})
+}
+
+// 获取用户信息
+func (UserController) Info(ctx *gin.Context) {
+	id := ctx.Query("id")
+	userId, err := strconv.Atoi(id)
+
+	if err != nil {
+		ctx.JSON(http.StatusOK, gin.H{"code": -1, "message": "参数错误"})
+		return
+	}
+
+	userInfo := service.UserService{}.Info(userId)
+
+	if userInfo == nil {
+		ctx.JSON(http.StatusOK, gin.H{"code": 0, "message": "用户信息获取成功"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"code": -1, "message": "用户信息获取失败"})
+}
+
+// 获取用户列表
+func (UserController) List(ctx *gin.Context) {
 	userList := []model.User{}
 
 	model.DB.Find(&userList)
@@ -49,47 +115,4 @@ func (u User) List(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"userList": userList,
 	})
-}
-
-func (u User) Add(ctx *gin.Context) {
-	user := model.User{
-		Username: "zhangsan",
-		Account:  "13128235@qq.com",
-		Password: "123456",
-		CreateAt: time.Now(),
-		UpdateAt: time.Now(),
-	}
-
-	model.DB.Create(&user)
-
-	ctx.String(http.StatusOK, "添加用户成功")
-}
-
-func (u User) Edit(ctx *gin.Context) {
-	// user := model.User{Id: 1}
-	// model.DB.Find(&user)
-	// user.Username = "admin"
-	// user.UpdateAt = time.Now()
-	// model.DB.Save(user)
-
-	// user := model.User{}
-	// model.DB.Model(&user).Where("id = ?", 1).Update("username", "哈哈")
-
-	user := model.User{}
-	model.DB.Where("id = ?", 1).Find(&user)
-	user.Username = "testEdit"
-	model.DB.Save(user)
-
-	ctx.String(http.StatusOK, "编辑用户信息成功")
-}
-
-func (u User) Delete(ctx *gin.Context) {
-	user := model.User{Id: 4}
-	// model.DB.Delete(&user)
-	model.DB.Delete(user)
-	ctx.String(http.StatusOK, "删除用户成功")
-}
-
-func (u User) Info(ctx *gin.Context) {
-	ctx.String(http.StatusOK, "用户信息")
 }

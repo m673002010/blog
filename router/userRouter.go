@@ -9,15 +9,13 @@ import (
 func UserRouterInit(r *gin.Engine) {
 	userRouter := r.Group("/user")
 
-	userRouter.POST("/login", controller.User{}.Login)
+	userRouter.POST("/login", controller.UserController{}.Login)
 
-	userRouter.GET("/info", controller.User{}.Info)
+	userRouter.POST("/register", controller.UserController{}.Register)
 
-	userRouter.GET("/list", controller.User{}.List)
+	userRouter.GET("/info", controller.UserController{}.Info)
 
-	userRouter.GET("/add", controller.User{}.Add)
+	userRouter.POST("/edit", controller.UserController{}.Edit)
 
-	userRouter.GET("/edit", controller.User{}.Edit)
-
-	userRouter.GET("/delete", controller.User{}.Delete)
+	userRouter.GET("/delete", controller.UserController{}.Delete)
 }
